@@ -154,7 +154,7 @@ def main():
         # LAYOUT
         # ======================================
 
-        st.subheader("🔵 Win % by Referee (Interactive Bar Chart)")
+        der("🔵 Win % by Referee (Interactive Bar Chart)")
         fig1 = px.bar(
             win_rate_ref,
             x=win_rate_ref.values,
@@ -180,7 +180,7 @@ def main():
         )
         st.plotly_chart(fig2, use_container_width=True)
 
-        st.subheader("🟢 Win % by Season (Trend Chart)")
+        st.subheader("🟢 Win % st.subheaby Season (Trend Chart)")
         fig3 = px.line(
             win_rate_season,
             markers=True,
@@ -189,15 +189,6 @@ def main():
         )
         st.plotly_chart(fig3, use_container_width=True)
 
-        st.subheader("🟣 Win % Heatmap (Referee × Season)")
-        fig4 = px.imshow(
-            heatmap_data,
-            color_continuous_scale="Blues",
-            text_auto=".1f",
-            labels={"x": "Season", "y": "Referee", "color": "Win %"},
-            title="MU Win % by Referee per Season",
-        )
-        st.plotly_chart(fig4, use_container_width=True)
 
         # Match count summary
         st.subheader("📊 Referee Match Counts (Filtered)")
