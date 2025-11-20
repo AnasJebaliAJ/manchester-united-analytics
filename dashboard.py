@@ -38,22 +38,21 @@ def main():
     try:
         df = load_data()
 
-        # Small preview so we can see if it loaded correctly
-        with st.expander("🔍 Data preview (for debugging, you can hide this later)"):
-            st.write("First 5 rows:")
+        # Preview (can hide later)
+        with st.expander("🔍 Data preview"):
             st.dataframe(df.head())
             st.write("Columns:", list(df.columns))
 
-        # Safety checks
+        # Required columns
         required_cols = ["home_team", "away_team", "home_goals", "away_goals", "Season", "Referee"]
         missing = [c for c in required_cols if c not in df.columns]
         if missing:
             st.error(f"Missing columns in CSV: {missing}")
             st.stop()
 
-        # -----------------------------
+        # -----------------------
         # Filter MU matches only
-        # -----------------------------
+        # -----------------------
         df["is_mu_match"] = df.apply(
             lambda row: (
                 row["home_team"] == "Man United" or row["away_team"] == "Man United"
@@ -63,9 +62,7 @@ def main():
 
         mu_matches = df[df["is_mu_match"]].copy()
 
-        # -----------------------------
         # Determine MU result W/D/L
-        # -----------------------------
         def mu_result(row):
             if row["home_team"] == "Man United":
                 if row["home_goals"] > row["away_goals"]:
@@ -84,9 +81,9 @@ def main():
 
         mu_matches["mu_result"] = mu_matches.apply(mu_result, axis=1)
 
-        # -----------------------------
+        # -----------------------
         # SIDEBAR FILTERS
-        # -----------------------------
+        # -----------------------
         st.sidebar.title("Filters")
 
         seasons = st.sidebar.multiselect(
@@ -107,24 +104,24 @@ def main():
         ].copy()
 
         if filtered.empty:
-            st.warning("No matches for the current filter selection.")
+            st.warning("No matches for current filter selection.")
             return
 
-        # -----------------------------
-        # Referee match count (within filtered data)
-        # -----------------------------
+        # -----------------------
+        # MATCH COUNT & METRICS
+        # -----------------------
         filtered["match_count"] = filtered["Referee"].map(
             filtered["Referee"].value_counts()
         )
 
-        # Win rate per Referee
+        # Win rate per referee
         win_rate_ref = (
             filtered.groupby("Referee")["mu_result"]
             .apply(lambda x: (x == "W").mean() * 100)
             .sort_values(ascending=False)
         )
 
-        # Goal difference per Referee
+        # Goal difference per referee
         filtered["goal_diff"] = filtered.apply(
             lambda row: (row["home_goals"] - row["away_goals"])
             if row["home_team"] == "Man United"
@@ -133,17 +130,12 @@ def main():
         )
 
         gd_ref = (
-            filtered.groupby("Referee")["goal_diff"].mean().sort_values(ascending=False)
+            filtered.groupby("Referee")["goal_diff"]
+            .mean()
+            .sort_values(ascending=False)
         )
 
-        # Win rate per season
-        win_rate_season = (
-            filtered.groupby("Season")["mu_result"]
-            .apply(lambda x: (x == "W").mean() * 100)
-            .sort_index()
-        )
-
-        # Heatmap matrix
+        # Heatmap data
         heatmap_data = (
             filtered.groupby(["Referee", "Season"])["mu_result"]
             .apply(lambda x: (x == "W").mean() * 100)
@@ -151,10 +143,11 @@ def main():
         )
 
         # ======================================
-        # LAYOUT
+        # LAYOUT (Season Trend Chart Removed)
         # ======================================
 
-        der("🔵 Win % by Referee (Interactive Bar Chart)")
+        # Win % by Referee
+        st.subheader("🔵 Win % by Referee (Interactive Bar Chart)")
         fig1 = px.bar(
             win_rate_ref,
             x=win_rate_ref.values,
@@ -167,6 +160,7 @@ def main():
         )
         st.plotly_chart(fig1, use_container_width=True)
 
+        # Goal Difference by Referee
         st.subheader("🔴 Average Goal Difference by Referee")
         fig2 = px.bar(
             gd_ref,
@@ -180,17 +174,18 @@ def main():
         )
         st.plotly_chart(fig2, use_container_width=True)
 
-        st.subheader("🟢 Win % st.subheaby Season (Trend Chart)")
-        fig3 = px.line(
-            win_rate_season,
-            markers=True,
-            labels={"value": "Win %", "index": "Season"},
-            title="MU Win % per Season",
+        # Heatmap
+        st.subheader("🟣 Win % Heatmap (Referee × Season)")
+        fig4 = px.imshow(
+            heatmap_data,
+            color_continuous_scale="Blues",
+            text_auto=".1f",
+            labels={"x": "Season", "y": "Referee", "color": "Win %"},
+            title="MU Win % by Referee per Season",
         )
-        st.plotly_chart(fig3, use_container_width=True)
+        st.plotly_chart(fig4, use_container_width=True)
 
-
-        # Match count summary
+        # Match Count Table
         st.subheader("📊 Referee Match Counts (Filtered)")
         st.dataframe(
             filtered.groupby("Referee")["match_count"]
@@ -199,7 +194,7 @@ def main():
         )
 
     except Exception as e:
-        st.error("❌ An error occurred while running the app.")
+        st.error("❌ Error in dashboard:")
         st.code(traceback.format_exc())
 
 
